@@ -6,7 +6,10 @@ compass = require('gulp-compass'),
 connect = require('gulp-connect'),
 gulpif = require('gulp-if'),
 uglify = require('gulp-uglify'),
-minifyHTML = require('gulp-minify-html');
+minifyHTML = require('gulp-minify-html'),
+jsonminify = require('gulp-jsonminify'),
+imagemin = require('gulp-imagemin'),
+pngcrush = require('imagemin-pngcrush');
 
 var env = process.env.NODE_ENV || 'development';
 
@@ -47,6 +50,8 @@ gulp.task('watch', function(){
   gulp.watch(jsSources, ['js']);
   gulp.watch('components/sass/*.scss', ['compass']);
   gulp.watch(htmlSources, ['html']);
+  gulp.watch('builds/development/js/*.json', ['json']);
+  gulp.watch('builds/development/images/**/*.*', ['images']);
 });
 
 gulp.task('html', function(){
@@ -64,4 +69,22 @@ gulp.task('connect', function(){
 	});
 });
 
-gulp.task('default', ['html', 'js', 'compass', 'connect', 'watch']);
+gulp.task('json', function() {
+  gulp.src('builds/development/js/*.json')
+    .pipe(gulpif(env === 'production', jsonminify()))
+    .pipe(gulpif(env === 'production', gulp.dest('builds/production/js')))
+    .pipe(connect.reload())
+});
+
+gulp.task('images', function() {
+  gulp.src('builds/development/images/**/*.*')
+    .pipe(gulpif(env === 'production', imagemin({
+      progressive: true,
+      svgoPlugins: [{ removeViewBox: false }],
+      use: [pngcrush()]
+    })))
+    .pipe(gulpif(env === 'production', gulp.dest(outputDir + 'images')))
+    .pipe(connect.reload())
+});
+
+gulp.task('default', ['html', 'json', 'js', 'compass', 'images', 'connect', 'watch']);
